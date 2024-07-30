@@ -209,17 +209,20 @@ def delete_admin(id):
 
 # CRUD for Meals
 @app.route('/meals', methods=['POST'])
+@jwt_required()
 def add_meal():
     data = request.get_json()
-    if not all(k in data for k in ('name', 'price', 'category_id')):
-        return jsonify({'message': 'Missing meal name, price or category'}), 400
+    if not all(k in data for k in ('name', 'price', 'category_id', 'image')):
+        return jsonify({'message': 'Missing meal name, price, category_id, or image'}), 400
 
+    admin_id = get_jwt_identity()
     meal = Meal(
         name=data['name'],
         description=data.get('description'),
         price=data['price'],
+        image=data['image'],
         category_id=data['category_id'],
-        admin_id=1  # Placeholder admin ID
+        admin_id=admin_id  # Use the ID from JWT token
     )
     db.session.add(meal)
     db.session.commit()
@@ -233,6 +236,7 @@ def get_meals():
         'name': meal.name,
         'description': meal.description,
         'price': meal.price,
+        'image': meal.image,
         'category': meal.category.category_name
     } for meal in meals])
 
@@ -244,10 +248,12 @@ def get_meal(id):
         'name': meal.name,
         'description': meal.description,
         'price': meal.price,
+        'image': meal.image,
         'category': meal.category.category_name
     })
 
 @app.route('/meals/<int:id>', methods=['PUT'])
+@jwt_required()
 def update_meal(id):
     data = request.get_json()
     meal = Meal.query.get_or_404(id)
@@ -257,12 +263,15 @@ def update_meal(id):
         meal.description = data['description']
     if 'price' in data:
         meal.price = data['price']
+    if 'image' in data:
+        meal.image = data['image']
     if 'category_id' in data:
         meal.category_id = data['category_id']
     db.session.commit()
     return jsonify({'message': 'Meal updated successfully'})
 
 @app.route('/meals/<int:id>', methods=['DELETE'])
+@jwt_required()
 def delete_meal(id):
     meal = Meal.query.get_or_404(id)
     db.session.delete(meal)
