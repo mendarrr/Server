@@ -18,7 +18,7 @@ class DevelopmentConfig(Config):
 
 class TestingConfig(Config):
     TESTING = True
-    SQLALCHEMY_DATABASE_URI = ('DATABASE_URI', 'sqlite:///:memory')
+    SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
 
 class ProductionConfig(Config):
     DEBUG = False
@@ -42,7 +42,7 @@ def create_app(config_name='default'):
     CORS(app)
 
     with app.app_context():
-        from models import User,Order, Admin, Meals, Category
+        from models import User, Admin, Meal, Transaction, Category
         db.create_all()
 
     return app
@@ -54,4 +54,3 @@ metadata = MetaData(naming_convention={
 db = SQLAlchemy(metadata=metadata)
 migrate = Migrate()
 api = Api()
-
