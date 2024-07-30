@@ -8,7 +8,7 @@ from datetime import datetime
 
 app = create_app()
 
-bcrypt = Bcrypt()
+bcrypt = Bcrypt(app)
 jwt = JWTManager(app)
 
 # User Management
@@ -25,7 +25,15 @@ def register():
         password_hash=hashed_password,
         role=data['role']
     )
-    db.session.add(user)
+
+    if data['role'] == 'admin':
+        db.session.add(user)
+        db.session.commit()
+        admin = Admin(user_id=user.id)
+        db.session.add(admin)
+    else:
+        db.session.add(user)
+    
     db.session.commit()
     return jsonify({'message': 'User created successfully'}), 201
 
