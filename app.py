@@ -2,9 +2,9 @@ from flask import Flask, request, jsonify
 from flask_jwt_extended import JWTManager, jwt_required, create_access_token, get_jwt_identity
 from flask_bcrypt import Bcrypt
 from flask_cors import CORS
+from datetime import datetime
 from config import create_app, db
 from models import User, Admin, Meal, Order, Category
-from datetime import datetime
 
 app = create_app()
 bcrypt = Bcrypt(app)
@@ -32,6 +32,28 @@ def register():
     db.session.commit()
     return jsonify({'message': 'User created successfully'}), 201
 
+@app.route('/admin_register', methods=['POST'])
+@jwt_required()
+def admin_register():
+    admin_count = Admin.query.count()
+    if admin_count >= 5:
+        return jsonify({'message': 'Cannot add more than 5 admins'}), 403
+
+    data = request.get_json()
+    if not all(k in data for k in ('username', 'email', 'password')):
+        return jsonify({'message': 'Missing required fields'}), 400
+
+    hashed_password = bcrypt.generate_password_hash(data['password']).decode('utf-8')
+    admin = Admin(
+        username=data['username'],
+        email=data['email'],
+        password_hash=hashed_password
+    )
+
+    db.session.add(admin)
+    db.session.commit()
+    return jsonify({'message': 'Admin created successfully'}), 201
+
 @app.route('/login', methods=['POST'])
 def login():
     data = request.get_json()
@@ -42,15 +64,15 @@ def login():
     admin = Admin.query.filter_by(email=data['email']).first()
 
     if user and bcrypt.check_password_hash(user.password_hash, data['password']):
-        access_token = create_access_token(identity=user.id)
+        access_token = create_access_token(identity={'id': user.id, 'role': 'user'})
         return jsonify({
             'message': 'Login successful',
             'access_token': access_token,
-            'role': user.role
+            'role': 'user'
         }), 200
 
     elif admin and bcrypt.check_password_hash(admin.password_hash, data['password']):
-        access_token = create_access_token(identity=admin.id)
+        access_token = create_access_token(identity={'id': admin.id, 'role': 'admin'})
         return jsonify({
             'message': 'Login successful',
             'access_token': access_token,
@@ -66,7 +88,6 @@ def logout():
 
 # CRUD for Users
 @app.route('/users', methods=['GET'])
-@jwt_required()
 def get_users():
     users = User.query.all()
     return jsonify([{
@@ -77,7 +98,6 @@ def get_users():
     } for user in users])
 
 @app.route('/users/<int:id>', methods=['GET'])
-@jwt_required()
 def get_user(id):
     user = User.query.get_or_404(id)
     return jsonify({
@@ -87,8 +107,25 @@ def get_user(id):
         'role': user.role
     })
 
+@app.route('/users', methods=['POST'])
+def add_user():
+    data = request.get_json()
+    if not all(k in data for k in ('username', 'email', 'password', 'role')):
+        return jsonify({'message': 'Missing required fields'}), 400
+
+    hashed_password = bcrypt.generate_password_hash(data['password']).decode('utf-8')
+    user = User(
+        username=data['username'],
+        email=data['email'],
+        password_hash=hashed_password,
+        role=data['role']
+    )
+
+    db.session.add(user)
+    db.session.commit()
+    return jsonify({'message': 'User created successfully'}), 201
+
 @app.route('/users/<int:id>', methods=['PUT'])
-@jwt_required()
 def update_user(id):
     data = request.get_json()
     user = User.query.get_or_404(id)
@@ -96,13 +133,14 @@ def update_user(id):
         user.username = data['username']
     if 'email' in data:
         user.email = data['email']
+    if 'password' in data:
+        user.password_hash = bcrypt.generate_password_hash(data['password']).decode('utf-8')
     if 'role' in data:
         user.role = data['role']
     db.session.commit()
     return jsonify({'message': 'User updated successfully'})
 
 @app.route('/users/<int:id>', methods=['DELETE'])
-@jwt_required()
 def delete_user(id):
     user = User.query.get_or_404(id)
     db.session.delete(user)
@@ -111,7 +149,6 @@ def delete_user(id):
 
 # CRUD for Admins
 @app.route('/admins', methods=['GET'])
-@jwt_required()
 def get_admins():
     admins = Admin.query.all()
     return jsonify([{
@@ -121,7 +158,6 @@ def get_admins():
     } for admin in admins])
 
 @app.route('/admins/<int:id>', methods=['GET'])
-@jwt_required()
 def get_admin(id):
     admin = Admin.query.get_or_404(id)
     return jsonify({
@@ -130,8 +166,28 @@ def get_admin(id):
         'email': admin.email
     })
 
+@app.route('/admins', methods=['POST'])
+def add_admin():
+    admin_count = Admin.query.count()
+    if admin_count >= 5:
+        return jsonify({'message': 'Cannot add more than 5 admins'}), 403
+
+    data = request.get_json()
+    if not all(k in data for k in ('username', 'email', 'password')):
+        return jsonify({'message': 'Missing required fields'}), 400
+
+    hashed_password = bcrypt.generate_password_hash(data['password']).decode('utf-8')
+    admin = Admin(
+        username=data['username'],
+        email=data['email'],
+        password_hash=hashed_password
+    )
+
+    db.session.add(admin)
+    db.session.commit()
+    return jsonify({'message': 'Admin created successfully'}), 201
+
 @app.route('/admins/<int:id>', methods=['PUT'])
-@jwt_required()
 def update_admin(id):
     data = request.get_json()
     admin = Admin.query.get_or_404(id)
@@ -139,11 +195,12 @@ def update_admin(id):
         admin.username = data['username']
     if 'email' in data:
         admin.email = data['email']
+    if 'password' in data:
+        admin.password_hash = bcrypt.generate_password_hash(data['password']).decode('utf-8')
     db.session.commit()
     return jsonify({'message': 'Admin updated successfully'})
 
 @app.route('/admins/<int:id>', methods=['DELETE'])
-@jwt_required()
 def delete_admin(id):
     admin = Admin.query.get_or_404(id)
     db.session.delete(admin)
@@ -152,18 +209,17 @@ def delete_admin(id):
 
 # CRUD for Meals
 @app.route('/meals', methods=['POST'])
-@jwt_required()
 def add_meal():
     data = request.get_json()
-    if not all(k in data for k in ('name', 'price')):
-        return jsonify({'message': 'Missing meal name or price'}), 400
+    if not all(k in data for k in ('name', 'price', 'category_id')):
+        return jsonify({'message': 'Missing meal name, price or category'}), 400
 
-    admin_id = get_jwt_identity()
     meal = Meal(
         name=data['name'],
         description=data.get('description'),
         price=data['price'],
-        admin_id=admin_id
+        category_id=data['category_id'],
+        admin_id=1  # Placeholder admin ID
     )
     db.session.add(meal)
     db.session.commit()
@@ -176,22 +232,22 @@ def get_meals():
         'id': meal.id,
         'name': meal.name,
         'description': meal.description,
-        'price': meal.price
+        'price': meal.price,
+        'category': meal.category.category_name
     } for meal in meals])
 
 @app.route('/meals/<int:id>', methods=['GET'])
-@jwt_required()
 def get_meal(id):
     meal = Meal.query.get_or_404(id)
     return jsonify({
         'id': meal.id,
         'name': meal.name,
         'description': meal.description,
-        'price': meal.price
+        'price': meal.price,
+        'category': meal.category.category_name
     })
 
 @app.route('/meals/<int:id>', methods=['PUT'])
-@jwt_required()
 def update_meal(id):
     data = request.get_json()
     meal = Meal.query.get_or_404(id)
@@ -201,29 +257,64 @@ def update_meal(id):
         meal.description = data['description']
     if 'price' in data:
         meal.price = data['price']
+    if 'category_id' in data:
+        meal.category_id = data['category_id']
     db.session.commit()
     return jsonify({'message': 'Meal updated successfully'})
 
 @app.route('/meals/<int:id>', methods=['DELETE'])
-@jwt_required()
 def delete_meal(id):
     meal = Meal.query.get_or_404(id)
     db.session.delete(meal)
     db.session.commit()
     return jsonify({'message': 'Meal deleted successfully'})
 
+# CRUD for Orders
+@app.route('/orders', methods=['POST'])
+@jwt_required()
+def add_order():
+    data = request.get_json()
+    current_user = get_jwt_identity()
+
+    if 'meal_id' not in data:
+        return jsonify({'message': 'Missing meal ID'}), 400
+
+    order = Order(
+        user_id=current_user['id'],
+        meal_id=data['meal_id']
+    )
+    db.session.add(order)
+    db.session.commit()
+    return jsonify({'message': 'Order placed successfully'}), 201
+
+@app.route('/orders', methods=['GET'])
+def get_orders():
+    orders = Order.query.all()
+    return jsonify([{
+        'id': order.id,
+        'user': order.user.username,
+        'meal': order.meal.name,
+        'order_time': order.order_time
+    } for order in orders])
+
+@app.route('/orders/<int:id>', methods=['GET'])
+def get_order(id):
+    order = Order.query.get_or_404(id)
+    return jsonify({
+        'id': order.id,
+        'user': order.user.username,
+        'meal': order.meal.name,
+        'order_time': order.order_time
+    })
+
 # CRUD for Categories
 @app.route('/categories', methods=['POST'])
-@jwt_required()
 def add_category():
     data = request.get_json()
-    if not all(k in data for k in ('category_name', 'image')):
-        return jsonify({'message': 'Missing category name or image'}), 400
+    if 'category_name' not in data:
+        return jsonify({'message': 'Missing category name'}), 400
 
-    category = Category(
-        category_name=data['category_name'],
-        image=data['image']
-    )
+    category = Category(category_name=data['category_name'], image=data.get('image'))
     db.session.add(category)
     db.session.commit()
     return jsonify({'message': 'Category added successfully'}), 201
@@ -238,7 +329,6 @@ def get_categories():
     } for category in categories])
 
 @app.route('/categories/<int:id>', methods=['GET'])
-@jwt_required()
 def get_category(id):
     category = Category.query.get_or_404(id)
     return jsonify({
@@ -248,7 +338,6 @@ def get_category(id):
     })
 
 @app.route('/categories/<int:id>', methods=['PUT'])
-@jwt_required()
 def update_category(id):
     data = request.get_json()
     category = Category.query.get_or_404(id)
@@ -260,62 +349,11 @@ def update_category(id):
     return jsonify({'message': 'Category updated successfully'})
 
 @app.route('/categories/<int:id>', methods=['DELETE'])
-@jwt_required()
 def delete_category(id):
     category = Category.query.get_or_404(id)
     db.session.delete(category)
     db.session.commit()
     return jsonify({'message': 'Category deleted successfully'})
-
-# CRUD for Orders
-@app.route('/orders', methods=['POST'])
-@jwt_required()
-def place_order():
-    data = request.get_json()
-    if not all(k in data for k in ('meal_id',)):
-        return jsonify({'message': 'Missing meal_id'}), 400
-
-    user_id = get_jwt_identity()
-    meal = Meal.query.get_or_404(data['meal_id'])
-    order = Order(
-        user_id=user_id,
-        meal_id=meal.id
-    )
-    db.session.add(order)
-    db.session.commit()
-
-    # Decrease user balance and increase admin balance logic
-    return jsonify({'message': 'Order placed successfully'}), 201
-
-@app.route('/orders', methods=['GET'])
-@jwt_required()
-def get_orders():
-    orders = Order.query.all()
-    return jsonify([{
-        'id': order.id,
-        'user_id': order.user_id,
-        'meal_id': order.meal_id,
-        'order_time': order.order_time
-    } for order in orders])
-
-@app.route('/orders/<int:id>', methods=['GET'])
-@jwt_required()
-def get_order(id):
-    order = Order.query.get_or_404(id)
-    return jsonify({
-        'id': order.id,
-        'user_id': order.user_id,
-        'meal_id': order.meal_id,
-        'order_time': order.order_time
-    })
-
-@app.route('/orders/<int:id>', methods=['DELETE'])
-@jwt_required()
-def delete_order(id):
-    order = Order.query.get_or_404(id)
-    db.session.delete(order)
-    db.session.commit()
-    return jsonify({'message': 'Order deleted successfully'})
 
 if __name__ == '__main__':
     app.run(debug=True)
