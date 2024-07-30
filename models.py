@@ -12,7 +12,6 @@ class User(db.Model):
     password_hash = db.Column(db.String(128), nullable=False)
     role = db.Column(db.String(20), nullable=False)  # role 'client' or 'admin'
     transactions = db.relationship('Transaction', back_populates='user', lazy=True)
-    admin = db.relationship('Admin', back_populates='user', uselist=False, cascade="all, delete-orphan")
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -24,9 +23,16 @@ class Admin(db.Model):
     __tablename__ = 'Admin'
 
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('User.id'), nullable=False)
-    user = db.relationship('User', back_populates='admin')
+    username = db.Column(db.String(80), unique=True, nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    password_hash = db.Column(db.String(128), nullable=False)
     meals = db.relationship('Meal', back_populates='admin', lazy=True)
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
 
 class Meal(db.Model):
     __tablename__ = 'Meal'

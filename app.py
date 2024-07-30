@@ -18,6 +18,9 @@ def register():
     if not all(k in data for k in ('username', 'email', 'password', 'role')):
         return jsonify({'message': 'Missing required fields'}), 400
 
+    if data['role'] == 'admin':
+        return jsonify({'message': 'Admin registration is not allowed via this route'}), 403
+
     hashed_password = bcrypt.generate_password_hash(data['password']).decode('utf-8')
     user = User(
         username=data['username'],
@@ -26,14 +29,7 @@ def register():
         role=data['role']
     )
 
-    if data['role'] == 'admin':
-        db.session.add(user)
-        db.session.commit()
-        admin = Admin(user_id=user.id)
-        db.session.add(admin)
-    else:
-        db.session.add(user)
-    
+    db.session.add(user)
     db.session.commit()
     return jsonify({'message': 'User created successfully'}), 201
 
@@ -44,6 +40,8 @@ def login():
         return jsonify({'message': 'Missing email or password'}), 400
 
     user = User.query.filter_by(email=data['email']).first()
+    admin = Admin.query.filter_by(email=data['email']).first()
+
     if user and bcrypt.check_password_hash(user.password_hash, data['password']):
         access_token = create_access_token(identity=user.id)
         return jsonify({
@@ -51,6 +49,15 @@ def login():
             'access_token': access_token,
             'role': user.role
         }), 200
+
+    elif admin and bcrypt.check_password_hash(admin.password_hash, data['password']):
+        access_token = create_access_token(identity=admin.id)
+        return jsonify({
+            'message': 'Login successful',
+            'access_token': access_token,
+            'role': 'admin'
+        }), 200
+
     return jsonify({'message': 'Invalid email or password'}), 401
 
 @app.route('/logout', methods=['POST'])
@@ -166,89 +173,37 @@ def get_revenue():
     # Assume revenue calculation logic
     return jsonify({'revenue': 1000.00})
 
-# User Management Routes
-@app.route('/users', methods=['GET'])
-def get_users():
-    users = User.query.all()
-    return jsonify([{
-        'id': user.id,
-        'username': user.username,
-        'email': user.email,
-        'role': user.role
-    } for user in users])
-
-@app.route('/users/<int:id>', methods=['GET'])
-def get_user(id):
-    user = User.query.get_or_404(id)
-    return jsonify({
-        'id': user.id,
-        'username': user.username,
-        'email': user.email,
-        'role': user.role
-    })
-
-@app.route('/users/<int:id>', methods=['DELETE'])
-def delete_user(id):
-    user = User.query.get_or_404(id)
-    db.session.delete(user)
-    db.session.commit()
-    return jsonify({'message': 'User deleted successfully'})
-
-@app.route('/users/admin', methods=['POST'])
-def add_user_admin():
-    data = request.get_json()
-    if not all(k in data for k in ('username', 'email', 'password', 'role')):
-        return jsonify({'message': 'Missing required fields'}), 400
-
-    hashed_password = bcrypt.generate_password_hash(data['password']).decode('utf-8')
-    user = User(
-        username=data['username'],
-        email=data['email'],
-        password_hash=hashed_password,
-        role=data['role']
-    )
-    db.session.add(user)
-    db.session.commit()
-    return jsonify({'message': 'User created successfully'}), 201
-
 # Admin Management Routes
 @app.route('/admins', methods=['GET'])
 def get_admins():
     admins = Admin.query.all()
     return jsonify([{
         'id': admin.id,
-        'user_id': admin.user_id
+        'username': admin.username,
+        'email': admin.email
     } for admin in admins])
 
-@app.route('/admins/<int:id>', methods=['GET'])
-def get_admin(id):
-    admin = Admin.query.get_or_404(id)
-    return jsonify({
-        'id': admin.id,
-        'user_id': admin.user_id
-    })
-
-@app.route('/admins/<int:id>', methods=['DELETE'])
-def delete_admin(id):
-    admin = Admin.query.get_or_404(id)
-    db.session.delete(admin)
-    db.session.commit()
-    return jsonify({'message': 'Admin deleted successfully'})
-
-@app.route('/admins', methods=['POST'])
+@app.route('/admin', methods=['POST'])
 def add_admin():
     data = request.get_json()
-    if 'user_id' not in data:
-        return jsonify({'message': 'Missing user_id'}), 400
+    if not all(k in data for k in ('username', 'email', 'password')):
+        return jsonify({'message': 'Missing required fields'}), 400
 
-    user = User.query.get_or_404(data['user_id'])
-    if user.admin:
-        return jsonify({'message': 'User is already an admin'}), 400
+    existing_admins = Admin.query.all()
+    if len(existing_admins) >= 5:
+        return jsonify({'message': 'Cannot add more than 5 admins'}), 400
 
-    admin = Admin(user_id=user.id)
+    hashed_password = bcrypt.generate_password_hash(data['password']).decode('utf-8')
+    admin = Admin(
+        username=data['username'],
+        email=data['email'],
+        password_hash=hashed_password
+    )
     db.session.add(admin)
     db.session.commit()
-    return jsonify({'message': 'Admin added successfully'}), 201
+    return jsonify({'message': 'Admin created successfully'}), 201
 
 if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()
     app.run(debug=True)
