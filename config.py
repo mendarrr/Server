@@ -42,7 +42,7 @@ def create_app(config_name='default'):
     CORS(app)
 
     with app.app_context():
-        from models import User, Admin, Meal, Transaction, Category
+        from models import User, Admin, Meal, Order, Category
         db.create_all()
 
     return app
