@@ -2,9 +2,9 @@ from flask import Flask, request, jsonify
 from flask_jwt_extended import JWTManager, jwt_required, create_access_token, get_jwt_identity
 from flask_bcrypt import Bcrypt
 from flask_cors import CORS
+from datetime import datetime
 from config import create_app, db
 from models import User, Admin, Meal, Order, Category
-from datetime import datetime
 
 app = create_app()
 bcrypt = Bcrypt(app)
@@ -211,13 +211,14 @@ def delete_admin(id):
 @app.route('/meals', methods=['POST'])
 def add_meal():
     data = request.get_json()
-    if not all(k in data for k in ('name', 'price')):
-        return jsonify({'message': 'Missing meal name or price'}), 400
+    if not all(k in data for k in ('name', 'price', 'category_id')):
+        return jsonify({'message': 'Missing meal name, price or category'}), 400
 
     meal = Meal(
         name=data['name'],
         description=data.get('description'),
         price=data['price'],
+        category_id=data['category_id'],
         admin_id=1  # Placeholder admin ID
     )
     db.session.add(meal)
@@ -231,7 +232,8 @@ def get_meals():
         'id': meal.id,
         'name': meal.name,
         'description': meal.description,
-        'price': meal.price
+        'price': meal.price,
+        'category': meal.category.category_name
     } for meal in meals])
 
 @app.route('/meals/<int:id>', methods=['GET'])
@@ -241,7 +243,8 @@ def get_meal(id):
         'id': meal.id,
         'name': meal.name,
         'description': meal.description,
-        'price': meal.price
+        'price': meal.price,
+        'category': meal.category.category_name
     })
 
 @app.route('/meals/<int:id>', methods=['PUT'])
@@ -254,6 +257,8 @@ def update_meal(id):
         meal.description = data['description']
     if 'price' in data:
         meal.price = data['price']
+    if 'category_id' in data:
+        meal.category_id = data['category_id']
     db.session.commit()
     return jsonify({'message': 'Meal updated successfully'})
 
@@ -266,17 +271,17 @@ def delete_meal(id):
 
 # CRUD for Orders
 @app.route('/orders', methods=['POST'])
+@jwt_required()
 def add_order():
     data = request.get_json()
-    if not all(k in data for k in ('meal_id', 'quantity')):
-        return jsonify({'message': 'Missing meal ID or quantity'}), 400
+    current_user = get_jwt_identity()
 
-    user_id = get_jwt_identity()['id']
+    if 'meal_id' not in data:
+        return jsonify({'message': 'Missing meal ID'}), 400
+
     order = Order(
-        meal_id=data['meal_id'],
-        quantity=data['quantity'],
-        user_id=user_id,
-        order_time=datetime.now()
+        user_id=current_user['id'],
+        meal_id=data['meal_id']
     )
     db.session.add(order)
     db.session.commit()
@@ -287,37 +292,29 @@ def get_orders():
     orders = Order.query.all()
     return jsonify([{
         'id': order.id,
-        'meal_id': order.meal_id,
-        'quantity': order.quantity,
+        'user': order.user.username,
+        'meal': order.meal.name,
         'order_time': order.order_time
     } for order in orders])
 
-@app.route('/orders/<int:id>', methods=['PUT'])
-def update_order(id):
-    data = request.get_json()
+@app.route('/orders/<int:id>', methods=['GET'])
+def get_order(id):
     order = Order.query.get_or_404(id)
-    if 'meal_id' in data:
-        order.meal_id = data['meal_id']
-    if 'quantity' in data:
-        order.quantity = data['quantity']
-    db.session.commit()
-    return jsonify({'message': 'Order updated successfully'})
-
-@app.route('/orders/<int:id>', methods=['DELETE'])
-def delete_order(id):
-    order = Order.query.get_or_404(id)
-    db.session.delete(order)
-    db.session.commit()
-    return jsonify({'message': 'Order deleted successfully'})
+    return jsonify({
+        'id': order.id,
+        'user': order.user.username,
+        'meal': order.meal.name,
+        'order_time': order.order_time
+    })
 
 # CRUD for Categories
 @app.route('/categories', methods=['POST'])
 def add_category():
     data = request.get_json()
-    if 'name' not in data:
+    if 'category_name' not in data:
         return jsonify({'message': 'Missing category name'}), 400
 
-    category = Category(name=data['name'])
+    category = Category(category_name=data['category_name'], image=data.get('image'))
     db.session.add(category)
     db.session.commit()
     return jsonify({'message': 'Category added successfully'}), 201
@@ -327,7 +324,8 @@ def get_categories():
     categories = Category.query.all()
     return jsonify([{
         'id': category.id,
-        'name': category.name
+        'category_name': category.category_name,
+        'image': category.image
     } for category in categories])
 
 @app.route('/categories/<int:id>', methods=['GET'])
@@ -335,15 +333,18 @@ def get_category(id):
     category = Category.query.get_or_404(id)
     return jsonify({
         'id': category.id,
-        'name': category.name
+        'category_name': category.category_name,
+        'image': category.image
     })
 
 @app.route('/categories/<int:id>', methods=['PUT'])
 def update_category(id):
     data = request.get_json()
     category = Category.query.get_or_404(id)
-    if 'name' in data:
-        category.name = data['name']
+    if 'category_name' in data:
+        category.category_name = data['category_name']
+    if 'image' in data:
+        category.image = data['image']
     db.session.commit()
     return jsonify({'message': 'Category updated successfully'})
 
