@@ -25,7 +25,6 @@ class Meal(db.Model):
     name = db.Column(db.String(150), nullable=False)
     description = db.Column(db.String(300))
     price = db.Column(db.Float, nullable=False)
-    image = db.Column(db.String(300), nullable=False)
     admin_id = db.Column(db.Integer, db.ForeignKey('admin.id'), nullable=False)
     admin = db.relationship('Admin', backref=db.backref('meals', lazy=True))
 
