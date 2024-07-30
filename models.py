@@ -1,3 +1,5 @@
+# models.py
+
 from config import db
 from datetime import datetime
 
@@ -6,7 +8,7 @@ class User(db.Model):
     username = db.Column(db.String(150), nullable=False)
     email = db.Column(db.String(150), unique=True, nullable=False)
     password_hash = db.Column(db.String(200), nullable=False)
-    role = db.Column(db.String(50), nullable=False)#remove
+    role = db.Column(db.String(50), nullable=False)
 
     def __repr__(self):
         return f'<User {self.username}>'
@@ -25,8 +27,11 @@ class Meal(db.Model):
     name = db.Column(db.String(150), nullable=False)
     description = db.Column(db.String(300))
     price = db.Column(db.Float, nullable=False)
+    image = db.Column(db.String(300), nullable=False)
     admin_id = db.Column(db.Integer, db.ForeignKey('admin.id'), nullable=False)
+    category_id = db.Column(db.Integer, db.ForeignKey('category.id'), nullable=False)  # Foreign key to Category
     admin = db.relationship('Admin', backref=db.backref('meals', lazy=True))
+    category = db.relationship('Category', backref=db.backref('meals', lazy=True))  # Relationship to Category
 
     def __repr__(self):
         return f'<Meal {self.name}>'
