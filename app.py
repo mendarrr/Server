@@ -363,6 +363,17 @@ def delete_category(id):
     db.session.delete(category)
     db.session.commit()
     return jsonify({'message': 'Category deleted successfully'})
-
+@app.route("/categories/<int:id>/meals", methods=["GET"])
+def get_meals_by_category(id):
+    category = Category.query.get_or_404(id)
+    meals = category.meals
+    return jsonify([{
+        'id': meal.id,
+        'name': meal.name,
+        'description': meal.description,
+        'price': meal.price,
+        'image': meal.image,
+        'category': meal.category.category_name
+    } for meal in meals])
 if __name__ == '__main__':
     app.run(debug=True)
