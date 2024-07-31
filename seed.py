@@ -1,6 +1,18 @@
 from faker import Faker
 from app import app
-from models import User, Admin, Meal, Order, Category,db
+from models import User, Admin, Meal, Category, db
+from flask_bcrypt import Bcrypt
+
+# Initialize the Bcrypt instance
+bcrypt = Bcrypt(app)
+
+admin_list = [
+    {'username': 'Levis Rabah', 'email': 'levisrabah@gmail.com', 'password': 'rabah9598'},
+    {'username': 'Elvis Moses', 'email': 'elvis@gmail.com', 'password': 'elvo123'},
+    {'username': 'Meshack Orina', 'email': 'mesh@gmail.com', 'password': 'orina456'},
+    {'username': 'Allan Too', 'email': 'allan@gmail.com', 'password': 'allan2024'},
+    {'username': 'Arnold Maina', 'email': 'arnold@gmail.com', 'password': 'arnold2024'}
+]
 
 if __name__ == '__main__':
     fake = Faker()
@@ -9,31 +21,30 @@ if __name__ == '__main__':
         db.drop_all()
         db.create_all()
 
-        users=[]
+        # Create users with Faker
+        users = []
         for _ in range(10):
             user = User(
                 username=fake.name(),
                 email=fake.email(),
-                password_hash=fake.password(length=16),
+                password_hash=bcrypt.generate_password_hash(fake.password(length=16)).decode('utf-8'),
                 role="user"
             )
             users.append(user)
         db.session.add_all(users)
         db.session.commit()
-
         print("Users added successfully")
-        admins=[]
-        for _ in range(5):
-            admin = Admin(
-                username=fake.name(),
-                email=fake.email(),
-                password_hash=fake.password(length=16)
-            )
-            admins.append(admin)
+
+        # Create admins with hashed passwords
+        admins = [Admin(
+            username=admin['username'],
+            email=admin['email'],
+            password_hash=bcrypt.generate_password_hash(admin['password']).decode('utf-8')
+        ) for admin in admin_list]
         db.session.add_all(admins)
         db.session.commit()
-
         print("Admins added successfully")
+
         
         categories=[
             Category(category_name="Appetizers", image="https://i.pinimg.com/236x/74/62/97/746297f074bed5db7f26cee0c1decc28.jpg"),

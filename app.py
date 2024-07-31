@@ -81,6 +81,7 @@ def login():
 
     return jsonify({'message': 'Invalid email or password'}), 401
 
+
 @app.route('/logout', methods=['POST'])
 @jwt_required()
 def logout():
@@ -215,7 +216,8 @@ def add_meal():
     if not all(k in data for k in ('name', 'price', 'category_id', 'image')):
         return jsonify({'message': 'Missing meal name, price, category_id, or image'}), 400
 
-    admin_id = get_jwt_identity()
+    identity = get_jwt_identity()
+    admin_id = identity['id']  # Extract the id from the identity
     meal = Meal(
         name=data['name'],
         description=data.get('description'),
