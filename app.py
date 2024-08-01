@@ -5,21 +5,28 @@ from flask_cors import CORS
 from datetime import datetime
 from config import create_app, db
 from models import User, Admin, Meal, Order, Category
+import re
 
 app = create_app()
 bcrypt = Bcrypt(app)
 jwt = JWTManager(app)
 CORS(app)
 
+# Email validation format
+email_pattern = re.compile(r"[^@]+@[^@]+\.[^@]+")
+
 @app.route('/register', methods=['POST'])
 def register():
     data = request.get_json()
     if not all(k in data for k in ('username', 'email', 'password', 'role')):
         return jsonify({'message': 'Missing required fields'}), 400
-
+    
     if data['role'] == 'admin':
         return jsonify({'message': 'Admin registration is not allowed via this route'}), 403
-
+    
+    if not email_pattern.match(data['email']):
+        return jsonify({'message': 'Invalid email format'}), 400
+    
     hashed_password = bcrypt.generate_password_hash(data['password']).decode('utf-8')
     user = User(
         username=data['username'],
@@ -42,6 +49,12 @@ def admin_register():
     data = request.get_json()
     if not all(k in data for k in ('username', 'email', 'password')):
         return jsonify({'message': 'Missing required fields'}), 400
+    
+    if not email_pattern.match(data['email']):
+        return jsonify({'message': 'Invalid email format'}), 400
+    
+    if Admin.query.filter_by(email=data['email']).first():
+        return jsonify({'message': 'Email already exists'}), 400
 
     hashed_password = bcrypt.generate_password_hash(data['password']).decode('utf-8')
     admin = Admin(
@@ -113,6 +126,9 @@ def add_user():
     data = request.get_json()
     if not all(k in data for k in ('username', 'email', 'password', 'role')):
         return jsonify({'message': 'Missing required fields'}), 400
+    
+    if not email_pattern.match(data['email']):
+        return jsonify({'message': 'Invalid email format'}), 400
 
     hashed_password = bcrypt.generate_password_hash(data['password']).decode('utf-8')
     user = User(
@@ -133,6 +149,8 @@ def update_user(id):
     if 'username' in data:
         user.username = data['username']
     if 'email' in data:
+        if not email_pattern.match(data['email']):
+            return jsonify({'message': 'Invalid email format'}), 400
         user.email = data['email']
     if 'password' in data:
         user.password_hash = bcrypt.generate_password_hash(data['password']).decode('utf-8')
@@ -176,6 +194,15 @@ def add_admin():
     data = request.get_json()
     if not all(k in data for k in ('username', 'email', 'password')):
         return jsonify({'message': 'Missing required fields'}), 400
+    
+    # Validate email format
+    if not re.match(r"[^@]+@[^@]+\.[^@]+", data['email']):
+        return jsonify({'message': 'Invalid email format'}), 400
+    
+    if Admin.query.filter_by(email=data['email']).first():
+        return jsonify({'message': 'Email already exists'}), 400
+    
+    
 
     hashed_password = bcrypt.generate_password_hash(data['password']).decode('utf-8')
     admin = Admin(
@@ -195,6 +222,8 @@ def update_admin(id):
     if 'username' in data:
         admin.username = data['username']
     if 'email' in data:
+        if not email_pattern.match(data['email']):
+            return jsonify({'message': 'Invalid email format'}), 400
         admin.email = data['email']
     if 'password' in data:
         admin.password_hash = bcrypt.generate_password_hash(data['password']).decode('utf-8')
