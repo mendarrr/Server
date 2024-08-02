@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 import pytest
 from app import create_app, db
-from models import User, Admin, Category
+from models import User, Admin, Category, Order
 
 def pytest_itemcollected(item):
     par = item.parent.obj
@@ -39,9 +39,9 @@ def init_database(app):
     
     # Create test category
     category = Category(category_name='Test Category', image='category.jpg')
-    
+    order=Order(user_id=1, meal_id=1, order_time=1111)
     # Add to session and commit
-    db.session.add_all([user, admin, category])
+    db.session.add_all([user, admin, category, order])
     db.session.commit()
 
     yield  # this is where the testing happens
