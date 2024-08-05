@@ -55,3 +55,8 @@ class Order(db.Model):
 
     def __repr__(self):
         return f'<Order {self.id}>'
+class Offer(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    offer_date = db.Column(db.Date, nullable=False)
+    meal_id = db.Column(db.Integer, db.ForeignKey('meal.id'), nullable=False)
+    meal = db.relationship('Meal', backref=db.backref('offers', lazy=True))
