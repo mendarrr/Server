@@ -4,7 +4,7 @@ from flask_bcrypt import Bcrypt
 from flask_cors import CORS
 from datetime import datetime
 from config import create_app, db
-from models import User, Admin, Meal, Order, Category
+from models import User, Admin, Meal, Offer,Order, Category
 
 app = create_app()
 bcrypt = Bcrypt(app)
@@ -375,5 +375,27 @@ def get_meals_by_category(id):
         'image': meal.image,
         'category': meal.category.category_name
     } for meal in meals])
+@app.route('/offers', methods=['POST'])
+def create_offer():
+    data = request.json
+    offer_date = datetime.strptime(data['date'], '%Y-%m-%d').date()
+    meal_ids = data['meals']
+    for meal_id in meal_ids:
+        new_offer = Offer(offer_date=offer_date, meal_id=meal_id)
+        db.session.add(new_offer)
+    db.session.commit()
+    return jsonify({'message': 'Offers created successfully'}), 201
+
+@app.route('/offers', methods=['GET'])
+def get_offers():
+    offers = db.session.query(Offer).all()
+    offers_data = {}
+    for offer in offers:
+        date_str = offer.offer_date.strftime('%Y-%m-%d')
+        if date_str not in offers_data:
+            offers_data[date_str] = []
+        meal = db.session.query(Meal).get(offer.meal_id)
+        offers_data[date_str].append(meal.name)
+    return jsonify(offers_data), 200
 if __name__ == '__main__':
     app.run(debug=True)
