@@ -376,7 +376,13 @@ def get_meals_by_category(id):
         'category': meal.category.category_name
     } for meal in meals])
 @app.route('/offers', methods=['POST'])
+@jwt_required()
 def create_offer():
+    current_user = get_jwt_identity()
+
+    if current_user['role'] != 'admin':
+        return jsonify({'message': 'Admin privileges required'}), 403
+
     data = request.json
     offer_date = datetime.strptime(data['date'], '%Y-%m-%d').date()
     meal_ids = data['meals']
@@ -385,7 +391,6 @@ def create_offer():
         db.session.add(new_offer)
     db.session.commit()
     return jsonify({'message': 'Offers created successfully'}), 201
-
 @app.route('/offers', methods=['GET'])
 def get_offers():
     offers = db.session.query(Offer).all()
