@@ -408,6 +408,39 @@ def get_offers():
         }
         offers_data[date_str].append(meal_data)
     return jsonify(offers_data), 200
+@app.route('/offers/<int:id>', methods=['PUT'])
+@jwt_required()
+def update_offer(id):
+    current_user = get_jwt_identity()
+
+    if current_user['role'] != 'admin':
+        return jsonify({'message': 'Admin privileges required'}), 403
+
+    offer = Offer.query.get_or_404(id)
+    data = request.json
+    offer_date = datetime.strptime(data['date'], '%Y-%m-%d').date()
+    offer.offer_date = offer_date
+
+    meal_ids = data['meals']
+    db.session.query(Offer).filter(Offer.offer_date == offer_date).delete()
+    for meal_id in meal_ids:
+        new_offer = Offer(offer_date=offer_date, meal_id=meal_id)
+        db.session.add(new_offer)
+    db.session.commit()
+    return jsonify({'message': 'Offer updated successfully'}), 200
+
+@app.route('/offers/<int:id>', methods=['DELETE'])
+@jwt_required()
+def delete_offer(id):
+    current_user = get_jwt_identity()
+
+    if current_user['role'] != 'admin':
+        return jsonify({'message': 'Admin privileges required'}), 403
+
+    offer = Offer.query.get_or_404(id)
+    db.session.delete(offer)
+    db.session.commit()
+    return jsonify({'message': 'Offer deleted successfully'}), 200
 
 if __name__ == '__main__':
     app.run(debug=True)
