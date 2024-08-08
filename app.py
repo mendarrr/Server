@@ -391,6 +391,7 @@ def create_offer():
         db.session.add(new_offer)
     db.session.commit()
     return jsonify({'message': 'Offers created successfully'}), 201
+
 @app.route('/offers', methods=['GET'])
 def get_offers():
     offers = db.session.query(Offer).all()
@@ -401,6 +402,7 @@ def get_offers():
             offers_data[date_str] = []
         meal = db.session.query(Meal).get(offer.meal_id)
         meal_data = {
+            'id': offer.id,  # Include the offer ID
             'name': meal.name,
             'image': meal.image,
             'price': offer.meal.price,
@@ -441,6 +443,51 @@ def delete_offer(id):
     db.session.delete(offer)
     db.session.commit()
     return jsonify({'message': 'Offer deleted successfully'}), 200
+
+@app.route('/offers/<int:offer_id>', methods=['DELETE'])
+@jwt_required()
+def delete_offer(offer_id):
+    current_user = get_jwt_identity()
+
+    if current_user['role'] != 'admin':
+        return jsonify({'message': 'Admin privileges required'}), 403
+
+    offer = Offer.query.get_or_404(offer_id)
+    db.session.delete(offer)
+    db.session.commit()
+    return jsonify({'message': 'Offer deleted successfully'}), 200
+
+@app.route('/offers/<int:offer_id>', methods=['PUT'])
+@jwt_required()
+def update_offer(offer_id):
+    current_user = get_jwt_identity()
+
+    if current_user['role'] != 'admin':
+        return jsonify({'message': 'Admin privileges required'}), 403
+
+    offer = Offer.query.get_or_404(offer_id)
+    data = request.json
+
+    meal = Meal.query.get_or_404(offer.meal_id)
+    if 'name' in data:
+        meal.name = data['name']
+    if 'description' in data:
+        meal.description = data['description']
+    if 'price' in data:
+        meal.price = data['price']
+
+    db.session.commit()
+
+    updated_offer = {
+        'id': offer.id,
+        'name': meal.name,
+        'description': meal.description,
+        'price': meal.price,
+        'date': offer.offer_date.strftime('%Y-%m-%d')
+    }
+    return jsonify({'message': 'Offer updated successfully', 'offer': updated_offer}), 200
+
+
 
 if __name__ == '__main__':
     app.run(debug=True)
