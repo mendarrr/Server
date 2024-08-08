@@ -410,26 +410,33 @@ def get_offers():
         }
         offers_data[date_str].append(meal_data)
     return jsonify(offers_data), 200
-@app.route('/offers/<int:id>', methods=['PUT'])
+@app.route('/meals/<int:id>', methods=['PUT'])
 @jwt_required()
-def update_offer(id):
+def update_meal(id):
     current_user = get_jwt_identity()
-
+    # Verify the user's role 
     if current_user['role'] != 'admin':
         return jsonify({'message': 'Admin privileges required'}), 403
 
-    offer = Offer.query.get_or_404(id)
-    data = request.json
-    offer_date = datetime.strptime(data['date'], '%Y-%m-%d').date()
-    offer.offer_date = offer_date
+    # Get the meal by its ID
+    meal = Meal.query.get_or_404(id)
+    data = request.get_json()
 
-    meal_ids = data['meals']
-    db.session.query(Offer).filter(Offer.offer_date == offer_date).delete()
-    for meal_id in meal_ids:
-        new_offer = Offer(offer_date=offer_date, meal_id=meal_id)
-        db.session.add(new_offer)
+    if 'name' in data:
+        meal.name = data['name']
+    if 'description' in data:
+        meal.description = data['description']
+    if 'price' in data:
+        try:
+            meal.price = float(data['price'])
+        except ValueError:
+            return jsonify({'message': 'Invalid price format'}), 400
+
+
     db.session.commit()
-    return jsonify({'message': 'Offer updated successfully'}), 200
+
+    return jsonify({'message': 'Meal updated successfully'}), 200
+
 
 @app.route('/offers/<int:id>', methods=['DELETE'])
 @jwt_required()
