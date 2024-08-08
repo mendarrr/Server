@@ -419,15 +419,32 @@ def update_offer(id):
         return jsonify({'message': 'Admin privileges required'}), 403
 
     offer = Offer.query.get_or_404(id)
-    data = request.json
-    offer_date = datetime.strptime(data['date'], '%Y-%m-%d').date()
-    offer.offer_date = offer_date
-
-    meal_ids = data['meals']
-    db.session.query(Offer).filter(Offer.offer_date == offer_date).delete()
-    for meal_id in meal_ids:
-        new_offer = Offer(offer_date=offer_date, meal_id=meal_id)
-        db.session.add(new_offer)
+    data = request.get_json()
+    
+    # Update offer date
+    if 'date' in data:
+        try:
+            offer_date = datetime.strptime(data['date'], '%Y-%m-%d').date()
+            offer.offer_date = offer_date
+        except ValueError:
+            return jsonify({'message': 'Invalid date format. Use YYYY-MM-DD'}), 400
+    
+    # Update meal details 
+    if 'meal' in data:
+        meal = Meal.query.get_or_404(offer.meal_id)
+        
+        if 'name' in data['meal']:
+            meal.name = data['meal']['name']
+        
+        if 'description' in data['meal']:
+            meal.description = data['meal']['description']
+        
+        if 'price' in data['meal']:
+            try:
+                meal.price = float(data['meal']['price'])
+            except ValueError:
+                return jsonify({'message': 'Invalid price format'}), 400
+    
     db.session.commit()
     return jsonify({'message': 'Offer updated successfully'}), 200
 
