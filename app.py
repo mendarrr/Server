@@ -410,33 +410,43 @@ def get_offers():
         }
         offers_data[date_str].append(meal_data)
     return jsonify(offers_data), 200
-@app.route('/meals/<int:id>', methods=['PUT'])
+@app.route('/offers/<int:id>', methods=['PUT'])
 @jwt_required()
-def update_meal(id):
+def update_offer(id):
     current_user = get_jwt_identity()
-    # Verify the user's role 
+
     if current_user['role'] != 'admin':
         return jsonify({'message': 'Admin privileges required'}), 403
 
-    # Get the meal by its ID
-    meal = Meal.query.get_or_404(id)
+    offer = Offer.query.get_or_404(id)
     data = request.get_json()
-
-    if 'name' in data:
-        meal.name = data['name']
-    if 'description' in data:
-        meal.description = data['description']
-    if 'price' in data:
+    
+    # Update offer date
+    if 'date' in data:
         try:
-            meal.price = float(data['price'])
+            offer_date = datetime.strptime(data['date'], '%Y-%m-%d').date()
+            offer.offer_date = offer_date
         except ValueError:
-            return jsonify({'message': 'Invalid price format'}), 400
-
-
+            return jsonify({'message': 'Invalid date format. Use YYYY-MM-DD'}), 400
+    
+    # Update meal details 
+    if 'meal' in data:
+        meal = Meal.query.get_or_404(offer.meal_id)
+        
+        if 'name' in data['meal']:
+            meal.name = data['meal']['name']
+        
+        if 'description' in data['meal']:
+            meal.description = data['meal']['description']
+        
+        if 'price' in data['meal']:
+            try:
+                meal.price = float(data['meal']['price'])
+            except ValueError:
+                return jsonify({'message': 'Invalid price format'}), 400
+    
     db.session.commit()
-
-    return jsonify({'message': 'Meal updated successfully'}), 200
-
+    return jsonify({'message': 'Offer updated successfully'}), 200
 
 @app.route('/offers/<int:id>', methods=['DELETE'])
 @jwt_required()
