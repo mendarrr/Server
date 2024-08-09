@@ -401,6 +401,7 @@ def create_offer():
         db.session.add(new_offer)
     db.session.commit()
     return jsonify({'message': 'Offers created successfully'}), 201
+
 @app.route('/offers', methods=['GET'])
 def get_offers():
     offers = db.session.query(Offer).all()
@@ -410,7 +411,66 @@ def get_offers():
         if date_str not in offers_data:
             offers_data[date_str] = []
         meal = db.session.query(Meal).get(offer.meal_id)
-        offers_data[date_str].append(meal.name)
+        meal_data = {
+            'id': offer.id,  # Include the offer ID
+            'name': meal.name,
+            'image': meal.image,
+            'price': offer.meal.price,
+            'description': meal.description
+        }
+        offers_data[date_str].append(meal_data)
     return jsonify(offers_data), 200
+@app.route('/offers/<int:id>', methods=['PUT'])
+@jwt_required()
+def update_offer(id):
+    current_user = get_jwt_identity()
+
+    if current_user['role'] != 'admin':
+        return jsonify({'message': 'Admin privileges required'}), 403
+
+    offer = Offer.query.get_or_404(id)
+    data = request.get_json()
+    
+    # Update offer date
+    if 'date' in data:
+        try:
+            offer_date = datetime.strptime(data['date'], '%Y-%m-%d').date()
+            offer.offer_date = offer_date
+        except ValueError:
+            return jsonify({'message': 'Invalid date format. Use YYYY-MM-DD'}), 400
+    
+    # Update meal details 
+    if 'meal' in data:
+        meal = Meal.query.get_or_404(offer.meal_id)
+        
+        if 'name' in data['meal']:
+            meal.name = data['meal']['name']
+        
+        if 'description' in data['meal']:
+            meal.description = data['meal']['description']
+        
+        if 'price' in data['meal']:
+            try:
+                meal.price = float(data['meal']['price'])
+            except ValueError:
+                return jsonify({'message': 'Invalid price format'}), 400
+    
+    db.session.commit()
+    return jsonify({'message': 'Offer updated successfully'}), 200
+
+@app.route('/offers/<int:id>', methods=['DELETE'])
+@jwt_required()
+def delete_offer(id):
+    current_user = get_jwt_identity()
+
+    if current_user['role'] != 'admin':
+        return jsonify({'message': 'Admin privileges required'}), 403
+
+    offer = Offer.query.get_or_404(id)
+    db.session.delete(offer)
+    db.session.commit()
+    return jsonify({'message': 'Offer deleted successfully'}), 200
+
+
 if __name__ == '__main__':
     app.run(debug=True)

@@ -72,7 +72,7 @@ if __name__ == '__main__':
             Meal(name="Quesadilla", description="Grilled tortilla with cheese and chicken", price=8.99, admin_id=5, category_id=1, image='https://i.pinimg.com/236x/5a/98/35/5a9835137deff27d2022fdb393fad7f0.jpg'),
             Meal(name="Mini Tacos", description="Small tacos with beef and cheese", price=6.99, admin_id=1, category_id=1, image='https://i.pinimg.com/236x/1a/9f/de/1a9fde24f25d1f7df44e85c900ef37d8.jpg'),
             Meal(name="Crab Cakes", description="Fried crab cakes with sauce", price=9.99, admin_id=2, category_id=1, image='https://i.pinimg.com/236x/a0/62/40/a06240ced032c37e33fe45afb388e724.jpg'),
-            Meal(name="Shrimp Cocktail", description="Chilled shrimp with cocktail sauce", price=10.99, admin_id=3, category_id=1, image='https://i.pinimg.com/236x/ba/c6/9f/bac69f2e406c17e6f2cf2d30c9f2bbb8.jpg'),
+            Meal(name="Shrimp Cocktail", description="Chilled shrimp with cocktail sauce", price=10.99, admin_id=3, category_id=1, image='https:// i.pinimg.com/236x/ba/c6/9f/bac69f2e406c17e6f2cf2d30c9f2bbb8.jpg'),
             Meal(name="Cheese Platter", description="Assorted cheeses with crackers", price=12.99, admin_id=4, category_id=1, image='https://i.pinimg.com/236x/47/09/8c/47098ca62627836ea1c98664696ac228.jpg'),
             Meal(name="Deviled Eggs", description="Eggs with a creamy filling", price=5.99, admin_id=5, category_id=1, image='https://i.pinimg.com/236x/e5/4c/37/e54c37772f562385aee66a0d1cf7cab0.jpg'),
             Meal(name="Hummus Plate", description="Hummus with pita bread and vegetables", price=6.99, admin_id=1, category_id=1, image='https://i.pinimg.com/236x/9f/9e/7d/9f9e7d5b313c1bc652bbd4e392a1b415.jpg'),
