@@ -47,11 +47,11 @@ if __name__ == '__main__':
 
         
         categories=[
-            Category(category_name="Appetizers", image="https://i.pinimg.com/236x/74/62/97/746297f074bed5db7f26cee0c1decc28.jpg"),
-            Category(category_name="Starters", image="https://i.pinimg.com/236x/bf/82/05/bf82057cdd3c47275717dd04b17cc6b0.jpg"),
-            Category(category_name="Main Course", image="https://i.pinimg.com/236x/eb/6e/ec/eb6eecacd7a45143b9af85eb37468961.jpg"),
-            Category(category_name="Salads", image="https://i.pinimg.com/564x/f2/16/f0/f216f08940e8370d07f2295285a952df.jpg"),
-            Category(category_name="Desserts", image="https://i.pinimg.com/564x/9d/25/93/9d2593780fe22eba7acf1ea6e9e57110.jpg"),
+            Category(category_name="APPETIZERS", description='Flavorful dishes served before the main course to stimulate the appetite. These can range from bite-sized finger foods to light salads, offering a variety of tastes and textures to enhance the dining experience.', image="https://i.pinimg.com/564x/c7/cd/0b/c7cd0b4802aa989e48706dfb6cfd77cc.jpg"),
+            Category(category_name="STATERS", description='These are designed to stimulate the appetite, often light and flavorful, such as soups, salads, or finger foods like bruschetta or shrimp cocktail.', image="https://i.pinimg.com/564x/76/8b/d6/768bd63188b642699bd3bf8bce59222a.jpg"),
+            Category(category_name="MAIN COURSE", description='The Main Course category features hearty and substantial dishes that serve as the centerpiece of a meal. Typically including proteins like meat, fish, or plant-based alternatives, these dishes are often accompanied by sides such as vegetables, grains, or sauces, making them the most filling and satisfying part of the dining experience', image="https://i.pinimg.com/564x/95/de/02/95de0207010fac62b549df3f526e5006.jpg"),
+            Category(category_name="SALADS", description='The Salads category features fresh, vibrant dishes that combine crisp vegetables, leafy greens, and a variety of toppings like fruits, nuts, and cheeses. These meals are often dressed with light vinaigrettes or creamy dressings, offering a healthy and flavorful option for any time of the day. Perfect for a refreshing meal or a side dish, our salads cater to diverse tastes with both classic and creative combinations.', image="https://i.pinimg.com/564x/8f/19/62/8f1962a32091e211bc010eef7525a83a.jpg"),
+            Category(category_name="DESSERTS", description='The Desserts category features a delectable selection of sweet treats, including cakes, pastries, ice creams, and more, perfect for satisfying your sweet tooth and ending your meal on a delightful note', image="https://i.pinimg.com/564x/9d/25/93/9d2593780fe22eba7acf1ea6e9e57110.jpg"),
         ]
         db.session.add_all(categories)
         db.session.commit()
