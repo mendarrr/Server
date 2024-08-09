@@ -411,15 +411,18 @@ def get_offers():
         if date_str not in offers_data:
             offers_data[date_str] = []
         meal = db.session.query(Meal).get(offer.meal_id)
+        if meal is None:
+            continue  
         meal_data = {
-            'id': offer.id,  # Include the offer ID
+            'id': offer.id,  
             'name': meal.name,
             'image': meal.image,
-            'price': offer.meal.price,
+            'price': meal.price,
             'description': meal.description
         }
         offers_data[date_str].append(meal_data)
     return jsonify(offers_data), 200
+
 @app.route('/offers/<int:id>', methods=['PUT'])
 @jwt_required()
 def update_offer(id):
