@@ -323,7 +323,12 @@ def add_category():
     if 'category_name' not in data:
         return jsonify({'message': 'Missing category name'}), 400
 
-    category = Category(category_name=data['category_name'], image=data.get('image'))
+    # Create a new category with description
+    category = Category(
+        category_name=data['category_name'],
+        description=data.get('description'),  # Add this line
+        image=data.get('image')
+    )
     db.session.add(category)
     db.session.commit()
     return jsonify({'message': 'Category added successfully'}), 201
@@ -334,6 +339,7 @@ def get_categories():
     return jsonify([{
         'id': category.id,
         'category_name': category.category_name,
+        'description': category.description,  # Add this line
         'image': category.image
     } for category in categories])
 
@@ -343,6 +349,7 @@ def get_category(id):
     return jsonify({
         'id': category.id,
         'category_name': category.category_name,
+        'description': category.description,  # Add this line
         'image': category.image
     })
 
@@ -352,6 +359,8 @@ def update_category(id):
     category = Category.query.get_or_404(id)
     if 'category_name' in data:
         category.category_name = data['category_name']
+    if 'description' in data:
+        category.description = data['description']  # Add this line
     if 'image' in data:
         category.image = data['image']
     db.session.commit()
@@ -363,6 +372,7 @@ def delete_category(id):
     db.session.delete(category)
     db.session.commit()
     return jsonify({'message': 'Category deleted successfully'})
+
 @app.route("/categories/<int:id>/meals", methods=["GET"])
 def get_meals_by_category(id):
     category = Category.query.get_or_404(id)
