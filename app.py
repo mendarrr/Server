@@ -222,7 +222,7 @@ def add_meal():
         price=data['price'],
         image=data['image'],
         category_id=data['category_id'],
-        admin_id=admin_id  # Use the ID from JWT token
+        admin_id=admin_id['id']
     )
     db.session.add(meal)
     db.session.commit()
