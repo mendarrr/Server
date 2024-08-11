@@ -61,3 +61,15 @@ class Offer(db.Model):
     offer_date = db.Column(db.Date, nullable=False)
     meal_id = db.Column(db.Integer, db.ForeignKey('meal.id'), nullable=False)
     meal = db.relationship('Meal', backref=db.backref('offers', lazy=True))
+
+class Transaction(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    total = db.Column(db.Float, nullable=False)
+    items = db.Column(db.String(500), nullable=False) 
+    transaction_date = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship('User', backref=db.backref('transactions', lazy=True))
+
+    def __repr__(self):
+        return f'<Transaction {self.id} - User {self.user_id}>'
