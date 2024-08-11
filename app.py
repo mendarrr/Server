@@ -4,7 +4,7 @@ from flask_bcrypt import Bcrypt
 from flask_cors import CORS
 from datetime import datetime
 from config import create_app, db
-from models import User, Admin, Meal, Offer,Order, Category
+from models import User, Admin, Meal, Offer,Order, Category , Transaction
 
 app = create_app()
 bcrypt = Bcrypt(app)
@@ -474,6 +474,52 @@ def delete_offer(id):
     db.session.commit()
     return jsonify({'message': 'Offer deleted successfully'}), 200
 
+from flask import jsonify
+from flask_jwt_extended import jwt_required, get_jwt_identity
 
-if __name__ == '__main__':
-    app.run(debug=True)
+@app.route('/transactions', methods=['GET'])
+@jwt_required()
+def get_transactions():
+    current_user = get_jwt_identity()
+
+    # Check if the current user has admin privileges
+    if current_user['role'] != 'admin':
+        return jsonify({'message': 'Admin privileges required'}), 403
+
+    # Fetch all transactions from the database
+    transactions = Transaction.query.all()
+    transactions_list = [{
+        'id': transaction.id,
+        'userName': transaction.user.username,  
+        'date': transaction.transaction_date.strftime('%Y-%m-%d'),  
+        'items': transaction.items.split(','),  
+        'total': transaction.total
+    } for transaction in transactions]
+
+    return jsonify(transactions_list), 200
+
+
+@app.route('/transactions', methods=['POST'])
+def create_transaction():
+    try:
+        data = request.get_json()
+
+        user = User.query.filter_by(username=data['userName']).first()
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+
+        new_transaction = Transaction(
+            user_id=user.id,
+            total=data['total'],
+            items=','.join(data['items']),
+            transaction_date=datetime.strptime(data['date'], '%Y-%m-%d')
+        )
+
+        db.session.add(new_transaction)
+        db.session.commit()
+
+        return jsonify({"message": "Transaction created successfully"}), 201
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+

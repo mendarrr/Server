@@ -1,4 +1,4 @@
-from faker import Faker
+
 from app import app
 from models import User, Admin, Meal, Category, db
 from flask_bcrypt import Bcrypt
@@ -15,32 +15,21 @@ admin_list = [
 ]
 
 if __name__ == '__main__':
-    fake = Faker()
-
     with app.app_context():
         db.drop_all()
         db.create_all()
 
-        # Create users with Faker
-        users = []
-        for _ in range(10):
-            user = User(
-                username=fake.name(),
-                email=fake.email(),
-                password_hash=bcrypt.generate_password_hash(fake.password(length=16)).decode('utf-8'),
-                role="user"
+        # Add admin users to the database
+        admins = []
+        for admin in admin_list:
+            hashed_password = bcrypt.generate_password_hash(admin['password']).decode('utf-8')
+            new_admin = Admin(
+                username=admin['username'],
+                email=admin['email'],
+                password_hash=hashed_password,
             )
-            users.append(user)
-        db.session.add_all(users)
-        db.session.commit()
-        print("Users added successfully")
-
-        # Create admins with hashed passwords
-        admins = [Admin(
-            username=admin['username'],
-            email=admin['email'],
-            password_hash=bcrypt.generate_password_hash(admin['password']).decode('utf-8')
-        ) for admin in admin_list]
+            admins.append(new_admin)
+        
         db.session.add_all(admins)
         db.session.commit()
         print("Admins added successfully")
