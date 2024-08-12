@@ -127,7 +127,7 @@ PyRect==0.2.0
 PyScreeze==0.1.30
 pytest==8.3.2
 python-dateutil==2.9.0.post0
-python-dotenv @ file:///home/levis/Development/PHASE3/phase-3-ai-openai-api-overview-setup/python-dotenv
+python-dotenv
 python3-xlib==0.15
 pyttsx3==2.90
 pytube==15.0.0
