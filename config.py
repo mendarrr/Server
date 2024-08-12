@@ -1,10 +1,13 @@
 import os
+from dotenv import load_dotenv
+load_dotenv()
 from flask import Flask
 from flask_cors import CORS
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 from flask_restful import Api
 from sqlalchemy import MetaData
+
 
 class Config:
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URI', 'sqlite:///app.db')
@@ -14,7 +17,13 @@ class Config:
     JWT_ACCESS_TOKEN_EXPIRES = False  # Tokens will not expire for this example
 
 class DevelopmentConfig(Config):
-    DEBUG = True
+    DEBUG = False
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URI','sqlite:///app.db')
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    SECRET_KEY = os.environ.get('SECRET_KEY', 'your_secret_key')
+    JSONIFY_PRETTYPRINT_REGULAR = False
+    JWT_ACCESS_TOKEN_EXPIRES = False  # Tokens will not expire for this example
+
 
 class TestingConfig(Config):
     TESTING = True
@@ -33,7 +42,7 @@ config = {
 
 def create_app(config_name='default'):
     app = Flask(__name__)
-    app.config.from_object(config[config_name])
+    app.config.from_object(DevelopmentConfig)
 
     # Initialize extensions
     db.init_app(app)
