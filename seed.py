@@ -1,6 +1,6 @@
 
 from app import app
-from models import User, Admin, Meal, Category, db
+from models import Admin, Meal, Category, db
 from flask_bcrypt import Bcrypt
 
 # Initialize the Bcrypt instance
