@@ -73,3 +73,14 @@ class Transaction(db.Model):
 
     def __repr__(self):
         return f'<Transaction {self.id} - User {self.user_id}>'
+    
+class Payment(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    amount = db.Column(db.Float, nullable=False)
+    phone_number = db.Column(db.String(20), nullable=False)
+    transaction_id = db.Column(db.String(100), nullable=False)
+    status = db.Column(db.String(20), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship('User', backref=db.backref('payments', lazy=True))

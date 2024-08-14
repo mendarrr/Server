@@ -4,13 +4,25 @@ from flask_bcrypt import Bcrypt
 from flask_cors import CORS
 from datetime import datetime
 from config import create_app, db
-from models import User, Admin, Meal, Offer,Order, Category , Transaction
+from models import User, Admin, Meal, Offer,Order, Category , Transaction , Payment
+import requests
+from requests.auth import HTTPBasicAuth
+import base64
+from dotenv import load_dotenv
+import os
+import logging
 
 app = create_app()
 bcrypt = Bcrypt(app)
 jwt = JWTManager(app)
 CORS(app)
 
+DATABASE_URI = os.getenv('DATABASE_URI')
+DEFAULT_RECEIVING_NUMBER = os.getenv('DEFAULT_RECEIVING_NUMBER')
+MPESA_CONSUMER_KEY = os.getenv('MPESA_CONSUMER_KEY')
+MPESA_CONSUMER_SECRET = os.getenv('MPESA_CONSUMER_SECRET')
+MPESA_SHORTCODE = os.getenv('MPESA_SHORTCODE')
+MPESA_PASSKEY = os.getenv('MPESA_PASSKEY')
 @app.route('/register', methods=['POST'])
 def register():
     data = request.get_json()
@@ -523,3 +535,124 @@ def create_transaction():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/payment_history', methods=['GET'])
+@jwt_required()
+def payment_history():
+    current_user = get_jwt_identity()
+    payments = Payment.query.filter_by(user_id=current_user['id']).order_by(Payment.timestamp.desc()).all()
+    
+    payment_list = [{
+        'id': payment.id,
+        'amount': payment.amount,
+        'phone_number': payment.phone_number,
+        'transaction_id': payment.transaction_id,
+        'status': payment.status,
+        'timestamp': payment.timestamp.isoformat()
+    } for payment in payments]
+    
+    return jsonify(payment_list), 200
+
+
+def get_mpesa_access_token():
+    consumer_key = 'dDoPpCbPQYrts4nuJASCDa5HS2gVVpBTGaGXAqrBGLYOWwsw'
+    consumer_secret = 'oSGG5GYNWt4Vg56aE4TytQpIRFqAnuZDiS5UC76YgpqFPH5VIOWFoAVsMcQeet0o'
+    api_url = 'https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials'
+    response = requests.get(api_url, auth=HTTPBasicAuth(consumer_key, consumer_secret))
+    access_token = response.json().get('access_token')
+    return access_token
+
+
+def lipa_na_mpesa_online(phone_number, amount):
+    access_token = get_mpesa_access_token()
+    api_url = "https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest"
+    headers = {"Authorization": f"Bearer {access_token}"}
+
+    shortcode = '174379'
+    lipa_na_mpesa_online_passkey = 'bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919'
+    timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+    password = base64.b64encode((shortcode + lipa_na_mpesa_online_passkey + timestamp).encode()).decode('utf-8')
+
+    payload = {
+        "BusinessShortCode": shortcode,
+        "Password": password,
+        "Timestamp": timestamp,
+        "TransactionType": "CustomerPayBillOnline",
+        "Amount": amount,
+        "PartyA": phone_number,
+        "PartyB": shortcode,
+        "PhoneNumber": phone_number,
+        "CallBackURL": "https://your_callback_url.com/callback",
+        "AccountReference": "YourAccountReference",
+        "TransactionDesc": "Payment Description"
+    }
+
+    response = requests.post(api_url, json=payload, headers=headers)
+    return response.json()
+
+
+@app.route('/create-payment', methods=['POST'])
+def create_payment():
+    data = request.json
+    amount = data['amount']
+    phone_number = data['phone_number']
+
+    response = lipa_na_mpesa_online(phone_number, amount)
+    
+    return jsonify(response)
+
+
+@app.route('/callback', methods=['POST'])
+def callback():
+    data = request.json
+    transaction_id = data.get('CheckoutRequestID')
+
+    payment = Payment.query.filter_by(transaction_id=transaction_id).first()
+    if payment:
+        if data.get('ResultCode') == 0:  # ResultCode as an integer
+            payment.status = 'COMPLETED'
+        else:
+            payment.status = 'FAILED'
+        db.session.commit()
+
+    return jsonify({'status': 'success'})
+
+
+@app.route('/make_payment', methods=['POST'])
+@jwt_required()
+def make_payment():
+    data = request.get_json()
+    phone_number = data.get('phone_number')
+    amount = data.get('amount')
+    current_user = get_jwt_identity()
+
+    if not phone_number or not amount:
+        return jsonify({'message': 'Phone number and amount are required'}), 400
+
+    try:
+        amount = float(amount)
+    except ValueError:
+        return jsonify({'message': 'Invalid amount'}), 400
+
+    try:
+        response = lipa_na_mpesa_online(phone_number, amount)
+        
+        logging.info(f"M-Pesa API response: {response}")
+        
+        if response.get('ResponseCode') == '0':
+            # Create a new Payment record
+            new_payment = Payment(
+                amount=amount,
+                phone_number=phone_number,
+                transaction_id=response.get('CheckoutRequestID'),
+                status='PENDING',
+                user_id=current_user['id']
+            )
+            db.session.add(new_payment)
+            db.session.commit()
+
+            return jsonify({'message': 'Payment initiated successfully', 'transaction_id': response.get('CheckoutRequestID')}), 200
+        else:
+            return jsonify({'message': 'Payment failed', 'details': response}), 400
+    except Exception as e:
+        logging.error(f"Error in make_payment: {str(e)}")
+        return jsonify({'message': 'An error occurred while processing the payment'}), 500
