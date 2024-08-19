@@ -11,6 +11,22 @@ bcrypt = Bcrypt(app)
 jwt = JWTManager(app)
 CORS(app)
 
+@app.route('/', methods=['GET'])
+def index():
+    return jsonify({
+        'message': 'Welcome to the Food Ordering API',
+        'version': '1.0',
+        'endpoints': [
+            '/register',
+            '/login',
+            '/meals',
+            '/orders',
+            '/categories',
+            '/offers',
+            '/transactions'
+        ]
+    }), 200
+
 @app.route('/register', methods=['POST'])
 def register():
     data = request.get_json()
