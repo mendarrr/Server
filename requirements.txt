@@ -168,3 +168,4 @@ xlrd==2.0.1
 xyzservices==2024.4.0
 yt-dlp==2024.7.16
 zipp==3.18.2
+gunicorn
